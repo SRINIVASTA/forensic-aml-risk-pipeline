@@ -29,15 +29,15 @@ if "live_ledger" not in st.session_state:
 if "tick_counter" not in st.session_state:
     st.session_state.tick_counter = 0
 
-# FIXED: Removed all empty placeholder lists to resolve AST parsing failures
+# FIXED: Fully populated arrays to eliminate AST parsing failures
 mock_clients_raw = pd.DataFrame({
-    "client_id":,
+    "client_id": [1137, 716, 772, 681, 402],
     "client_name": ["Wells-Turner Corp", "Goodman Import LLC", "Phillips-Harris NGO", "Kim Anderson Defense", "Alpha Trading Co"],
     "sector_risk": ["High", "Medium", "High", "High", "Low"],
-    "pep_flag":,
+    "pep_flag": [0, 0, 1, 1, 0],
     "country": ["JP", "CH", "AE", "RU", "AU"],
-    "sanctions_fatf_country":,
-    "ofac_country":,
+    "sanctions_fatf_country": [0, 0, 1, 0, 0],
+    "ofac_country": [0, 0, 0, 1, 0],
     "ownership_opacity_score": [0.0, 0.0, 0.5, 0.0, 0.0]
 })
 
@@ -62,7 +62,7 @@ if app_mode == "⚡ Real-Time Live Data Stream":
             st.session_state.tick_counter += 1
             tick = st.session_state.tick_counter
             
-            # FIXED: Assigned dynamic list index choices to prevent execution crashes
+            # FIXED: Assigned explicit integer list choices to prevent execution crashes
             pool_clients = [1137, 716, 772, 681, 402]
             chosen_client = random.choice(pool_clients)
             
@@ -71,7 +71,7 @@ if app_mode == "⚡ Real-Time Live Data Stream":
                 chosen_client = 772
                 amount = 145000.00
                 ofac, fatf, struct, velocity, mispricing = 0, 1, 0, 1, 1
-            elif tick in:
+            elif tick in [12, 13, 14]:
                 chosen_client = 681
                 amount = 9950.00
                 ofac, fatf, struct, velocity, mispricing = 1, 0, 1, 1, 0
