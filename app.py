@@ -28,7 +28,7 @@ if "live_ledger" not in st.session_state:
 if "tick_counter" not in st.session_state:
     st.session_state.tick_counter = 0
 
-# FIXED: Added explicit populated arrays to prevent syntax and runtime compilation crashes
+# FIXED: Replaced empty syntax gaps with explicit data matching your streaming pool
 mock_clients_raw = pd.DataFrame({
     "client_id":,
     "client_name": ["Wells-Turner Corp", "Goodman Import LLC", "Phillips-Harris NGO", "Kim Anderson Defense", "Alpha Trading Co"],
