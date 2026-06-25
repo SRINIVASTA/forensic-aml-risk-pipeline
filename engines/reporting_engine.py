@@ -78,10 +78,11 @@ def compile_pdf_report(df_clients, df_aml, df_flagged_alerts):
         pdf.set_font('Helvetica', 'I', 10)
         pdf.cell(190, 10, 'No anomalies isolated across data arrays during evaluation window.', border=1, align='C', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-    # FIXED: Convert pdf output subclass directly to raw bytes array for Streamlit compatibility
-    return bytes(pdf.output())
+    # FIXED: Output directly to a standard binary stream buffer and fetch raw bytes to satisfy Python 3.14 + Streamlit requirements
+    pdf_buffer = io.BytesIO()
+    pdf.output(pdf_buffer)
+    return pdf_buffer.getvalue()
 
-# FIXED: Standardised signature parameters match frontend app.py layout tracking perfectly
 def compile_excel_workbook(df_clients, df_aml, df_flagged_alerts):
     excel_buffer = io.BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
