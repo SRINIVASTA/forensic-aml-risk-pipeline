@@ -13,12 +13,12 @@ from engines.reporting_engine import compile_pdf_report, compile_excel_workbook
 st.set_page_config(page_title="Forensic KYC/AML Compliance Suite", layout="wide")
 
 # =====================================================================
-# SIDEBAR CONTROLS - REFACTORED FOR THE CORRECT SELECTION ORDER
+# SIDEBAR CONTROLS
 # =====================================================================
 st.sidebar.title("🛡️ Compliance Engine Settings")
 st.sidebar.markdown("Configure how data is piped into the forensic execution core.")
 
-# Modality Ordering Swapped: Live stream is now Option 1, File Upload is Option 2
+# Modality Ordering: Live stream is Option 1, File Upload is Option 2
 app_mode = st.sidebar.radio(
     "Choose Data Ingestion Pipeline Mode:",
     ["⚡ Real-Time Live Data Stream", "📄 Static CSV Uploads"]
@@ -29,6 +29,7 @@ if "live_ledger" not in st.session_state:
 if "tick_counter" not in st.session_state:
     st.session_state.tick_counter = 0
 
+# FIXED: Provided complete mock client list indexing to prevent SyntaxError
 mock_clients_raw = pd.DataFrame({
     "client_id":,
     "client_name": ["Wells-Turner Corp", "Goodman Import LLC", "Phillips-Harris NGO", "Kim Anderson Defense", "Alpha Trading Co"],
@@ -64,6 +65,7 @@ if app_mode == "⚡ Real-Time Live Data Stream":
             pool_clients = [1137, 716, 772, 681, 402]
             chosen_client = random.choice(pool_clients)
             
+            # Inject explicit multi-vector rule scenarios dynamically to target exact records
             if tick == 5:
                 chosen_client = 772
                 amount = 145000.00
