@@ -28,15 +28,20 @@ if "live_ledger" not in st.session_state:
 if "tick_counter" not in st.session_state:
     st.session_state.tick_counter = 0
 
-# FIXED: Completely populated arrays with explicit integer and boolean values to resolve SyntaxError
+# FIXED: Explicit variables mapping structural arrays to fully eliminate syntax gaps
+client_id_array = [1137, 716, 772, 681, 402]
+pep_flag_array = [0, 0, 0, 1, 0]
+fatf_country_array = [0, 0, 1, 1, 0]
+ofac_country_array = [0, 0, 0, 1, 0]
+
 mock_clients_raw = pd.DataFrame({
-    "client_id":,
+    "client_id": client_id_array,
     "client_name": ["Wells-Turner Corp", "Goodman Import LLC", "Phillips-Harris NGO", "Kim Anderson Defense", "Alpha Trading Co"],
     "sector_risk": ["High", "Medium", "High", "High", "Low"],
-    "pep_flag":,
+    "pep_flag": pep_flag_array,
     "country": ["JP", "CH", "AE", "RU", "AU"],
-    "sanctions_fatf_country":,
-    "ofac_country":,
+    "sanctions_fatf_country": fatf_country_array,
+    "ofac_country": ofac_country_array,
     "ownership_opacity_score": [0.0, 0.0, 0.5, 0.0, 0.0]
 })
 
@@ -61,15 +66,18 @@ if app_mode == "⚡ Real-Time Live Data Stream":
             st.session_state.tick_counter += 1
             tick = st.session_state.tick_counter
             
-            # FIXED: Set complete list values
+            # FIXED: Explicit pool client reference populated
             pool_clients = [1137, 716, 772, 681, 402]
             chosen_client = random.choice(pool_clients)
+            
+            # FIXED: Set an explicit list array for matching outlier evaluation loops [10, 15, 22]
+            anomalous_ticks = [10, 15, 22]
             
             if tick == 5:
                 chosen_client = 772
                 amount = 145000.00
                 ofac, fatf, struct, velocity, mispricing = 0, 1, 0, 1, 1
-            elif tick in:  # FIXED: Replaced empty placeholder with specific ticks
+            elif tick in anomalous_ticks:
                 chosen_client = 681
                 amount = 9950.00
                 ofac, fatf, struct, velocity, mispricing = 1, 0, 1, 1, 0
@@ -204,5 +212,4 @@ else:
                     label="📥 Export Full Ledger Excel Workbook",
                     data=excel_data,
                     file_name="Static_Forensic_Data_Ledger.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
