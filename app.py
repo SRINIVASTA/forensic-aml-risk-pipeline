@@ -18,7 +18,6 @@ st.set_page_config(page_title="Forensic KYC/AML Compliance Suite", layout="wide"
 st.sidebar.title("🛡️ Compliance Engine Settings")
 st.sidebar.markdown("Configure how data is piped into the forensic execution core.")
 
-# Modality Ordering: Live stream is Option 1, File Upload is Option 2
 app_mode = st.sidebar.radio(
     "Choose Data Ingestion Pipeline Mode:",
     ["⚡ Real-Time Live Data Stream", "📄 Static CSV Uploads"]
@@ -29,15 +28,14 @@ if "live_ledger" not in st.session_state:
 if "tick_counter" not in st.session_state:
     st.session_state.tick_counter = 0
 
-# REMOVED TRAILING COMMAS AND ASSIGNED CLEAN INTEGERS FOR ALL KEYS TO PASS AST COMPILATION
 mock_clients_raw = pd.DataFrame({
-    "client_id": [1137, 716, 772, 681, 402],
+    "client_id":,
     "client_name": ["Wells-Turner Corp", "Goodman Import LLC", "Phillips-Harris NGO", "Kim Anderson Defense", "Alpha Trading Co"],
     "sector_risk": ["High", "Medium", "High", "High", "Low"],
-    "pep_flag": [0, 0, 1, 1, 0],
+    "pep_flag":,
     "country": ["JP", "CH", "AE", "RU", "AU"],
-    "sanctions_fatf_country": [0, 0, 1, 0, 0],
-    "ofac_country": [0, 0, 0, 1, 0],
+    "sanctions_fatf_country":,
+    "ofac_country":,
     "ownership_opacity_score": [0.0, 0.0, 0.5, 0.0, 0.0]
 })
 
@@ -62,16 +60,14 @@ if app_mode == "⚡ Real-Time Live Data Stream":
             st.session_state.tick_counter += 1
             tick = st.session_state.tick_counter
             
-            # Using clean list variables to prevent lookup exceptions
             pool_clients = [1137, 716, 772, 681, 402]
             chosen_client = random.choice(pool_clients)
             
-            # Inject explicit multi-vector rule scenarios dynamically to target exact records
             if tick == 5:
                 chosen_client = 772
                 amount = 145000.00
                 ofac, fatf, struct, velocity, mispricing = 0, 1, 0, 1, 1
-            elif tick in [10, 11, 12]:
+            elif tick in:
                 chosen_client = 681
                 amount = 9950.00
                 ofac, fatf, struct, velocity, mispricing = 1, 0, 1, 1, 0
@@ -125,14 +121,17 @@ if app_mode == "⚡ Real-Time Live Data Stream":
             
         status_placeholder.success("Simulation complete. Full log extraction arrays packaged.")
         
-        # Pull clean binary array data for Streamlit's widget to process
-        pdf_data = compile_pdf_report(df_clients, df_aml, df_flagged_alerts)
-        st.download_button(
-            label="📥 Download Forensic Live Stream PDF Audit Report", 
-            data=pdf_data, 
-            file_name="Live_Stream_Forensic_Report.pdf", 
-            mime="application/pdf"
-        )
+        # FIXED: Enforce a safe memory fallback check to ensure local DataFrames exist before generating reports
+        if 'df_aml' in locals() and 'df_flagged_alerts' in locals():
+            pdf_data = compile_pdf_report(df_clients, df_aml, df_flagged_alerts)
+            st.download_button(
+                label="📥 Download Forensic Live Stream PDF Audit Report", 
+                data=pdf_data, 
+                file_name="Live_Stream_Forensic_Report.pdf", 
+                mime="application/pdf"
+            )
+        else:
+            st.error("Error: Processing arrays were cleared. Please refresh and restart the streaming transmission.")
     else:
         status_placeholder.warning("Wire tracking link disconnected. Toggle the control switch to pipe incoming transmission signals.")
 
