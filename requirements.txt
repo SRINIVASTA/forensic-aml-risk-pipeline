@@ -2,6 +2,6 @@ streamlit
 pandas
 numpy
 scikit-learn
-matplotlib
 fpdf2
 openpyxl
+matplotlib
