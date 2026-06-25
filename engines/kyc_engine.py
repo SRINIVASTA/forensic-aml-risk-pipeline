@@ -1,23 +1,47 @@
 import pandas as pd
 import numpy as np
 
-def dynamic_levenshtein_distance(str1, str2):
-    """Calculates editorial distance matrix between names to bypass typos."""
-    m, n = len(str1), len(str2)
-    dp = [[j if i == 0 else (i if j == 0 else 0) for j in range(n + 1)] for i in range(m + 1)]
-    for i in range(1, m + 1):
-        for j in range(1, n + 1):
-            if str1[i-1] == str2[j-1]:
-                dp[i][j] = dp[i-1][j-1]
-            else:
-                dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])
-    return dp[m][n]
+def process_kyc_pipeline(df_raw_clients):
+    """Clean data structures and execute structural compliance risk metrics."""
+    df = df_raw_clients.copy()
+    
+    if 'beneficial_owners' not in df.columns:
+        df['beneficial_owners'] = [[] for _ in range(len(df))]
+    else:
+        df['beneficial_owners'] = df['beneficial_owners'].apply(
+            lambda x: eval(x) if isinstance(x, str) and x.startswith('[') else ([x] if pd.notna(x) else [])
+        )
+        
+    results = df.apply(calculate_onboarding_risk, axis=1)
+    df[['Risk_Score', 'Risk_Rating', 'Flags_Triggered', 'KYC_Status']] = results
+    return df
+
+def rapid_levenshtein_ratio(s1, s2):
+    """Calculates an optimized Levenshtein distance using structural pruning."""
+    if len(s1) < len(s2):
+        s1, s2 = s2, s1
+    if len(s2) == 0:
+        return len(s1)
+    
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+        
+    return previous_row[-1]
 
 def calculate_onboarding_risk(row):
+    """Evaluates multi-vector regulatory risks to yield risk metrics and operational status."""
     risk_score = 0
     flags = []
-    HIGH_RISK_COUNTRIES = ["Iran", "North Korea", "Syria", "Myanmar", "Russia"]
-    PEP_LIST = ["John Doe Sr.", "Jane Smith-VIP", "Alex President"]
+    
+    HIGH_RISK_COUNTRIES = {"Iran", "North Korea", "Syria", "Myanmar", "Russia", "RU"}
+    PEP_LIST = {"john doe sr.", "jane smith-vip", "alex president"}
     FUZZY_MATCH_THRESHOLD = 3
     
     country = str(row.get('country', row.get('client_country', 'US'))).strip()
@@ -29,40 +53,50 @@ def calculate_onboarding_risk(row):
     if country in HIGH_RISK_COUNTRIES or fatf_flag == 1:
         risk_score += 50
         flags.append(f"High-Risk/FATF Jurisdiction ({country})")
+        
     if ofac_flag == 1:
         risk_score += 50
         flags.append("OFAC Sanctions Match")
+        
     if opacity > 0:
         risk_score += int(opacity * 30)
         flags.append("Opaque Ownership Structure")
 
     pep_flags = []
     flat_owners = []
+    
     def extract_strings(element):
         if isinstance(element, (list, tuple, np.ndarray, pd.Series)):
-            for sub_element in element: extract_strings(sub_element)
-        else:
-            if pd.notna(element): flat_owners.append(str(element).strip())
-            
-    if 'beneficial_owners' in row:
-        extract_strings(row['beneficial_owners'])
+            for sub_element in element: 
+                extract_strings(sub_element)
+        elif pd.notna(element):
+            val = str(element).strip()
+            if val: 
+                flat_owners.append(val.lower())
+                
+    extract_strings(row.get('beneficial_owners', []))
             
     for individual_name in flat_owners:
+        if individual_name in {"undisclosed owner", "none", ""}:
+            continue
+            
         for pep in PEP_LIST:
-            if dynamic_levenshtein_distance(individual_name.lower(), pep.lower()) <= FUZZY_MATCH_THRESHOLD:
-                pep_flags.append(f"{individual_name} (Matched: {pep})")
+            if abs(len(individual_name) - len(pep)) > FUZZY_MATCH_THRESHOLD:
+                continue
+                
+            if rapid_levenshtein_ratio(individual_name, pep) <= FUZZY_MATCH_THRESHOLD:
+                pep_flags.append(f"{individual_name.title()} (Matched: {pep.title()})")
+                break
                 
     if pep_flags or pep_flag == 1:
         risk_score += 40
         flags.append(f"PEP Alert: {', '.join(pep_flags) if pep_flags else 'Direct Flag'}")
 
-    rating = "High Risk" if risk_score >= 50 else ("Medium Risk" if risk_score >= 20 else "Low Risk")
-    status = "Escalate for EDD" if risk_score >= 50 else ("Requires Bi-Annual Review" if risk_score >= 20 else "Approved")
+    if risk_score >= 50:
+        rating, status = "High Risk", "Escalate for EDD"
+    elif risk_score >= 20:
+        rating, status = "Medium Risk", "Requires Bi-Annual Review"
+    else:
+        rating, status = "Low Risk", "Approved"
+        
     return pd.Series([risk_score, rating, ", ".join(flags) if flags else "None", status])
-
-def process_kyc_pipeline(df_raw_clients):
-    df = df_raw_clients.copy()
-    if 'beneficial_owners' not in df.columns:
-        df['beneficial_owners'] = "[['Undisclosed Owner']]"
-    df[['Risk_Score', 'Risk_Rating', 'Flags_Triggered', 'KYC_Status']] = df.apply(calculate_onboarding_risk, axis=1)
-    return df
