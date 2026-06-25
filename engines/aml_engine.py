@@ -21,13 +21,12 @@ def process_aml_pipeline(df_aml_raw, df_processed_clients):
         lambda r: 1 if r.get('counterparty_country') in OFFSHORE_HAVENS and r.get('client_country') not in OFFSHORE_HAVENS else 0, axis=1
     )
 
-    # Train Isolation forest model with the fine-tuned 1% anomaly cap
+    # Train Isolation Forest with the tuned 1% anomaly allocation limit
     X_ml = df_aml[['amount']].values
     iso_forest = IsolationForest(contamination=0.01, random_state=42)
     df_aml['ML_Anomaly_Score'] = iso_forest.fit_predict(X_ml)
     df_aml['ML_Profiling'] = df_aml['ML_Anomaly_Score'].apply(lambda x: "⚠️ OUTLIER DETECTED" if x == -1 else "NORMAL")
 
-    # Perform SQL-equivalent lookup relational merge
     df_master = df_aml.merge(df_processed_clients, on="client_id", how="left")
 
     df_flagged = df_master[
