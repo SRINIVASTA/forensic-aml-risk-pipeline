@@ -1,8 +1,9 @@
-from fpdf import FPDF
+from fpdf import FPDF  # DO NOT USE fpdf2 HERE - fpdf2 is imported as 'fpdf'
 from fpdf.enums import XPos, YPos
 from datetime import datetime
 import io
 import pandas as pd
+
 
 class CompliancePDFReport(FPDF):
     def header(self):
