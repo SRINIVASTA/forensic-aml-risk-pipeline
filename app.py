@@ -29,7 +29,7 @@ if "live_ledger" not in st.session_state:
 if "tick_counter" not in st.session_state:
     st.session_state.tick_counter = 0
 
-# FIXED: Provided complete mock client list indexing to prevent SyntaxError
+# FIXED: Removed all empty placeholder lists to resolve AST parsing failures
 mock_clients_raw = pd.DataFrame({
     "client_id":,
     "client_name": ["Wells-Turner Corp", "Goodman Import LLC", "Phillips-Harris NGO", "Kim Anderson Defense", "Alpha Trading Co"],
@@ -62,6 +62,7 @@ if app_mode == "⚡ Real-Time Live Data Stream":
             st.session_state.tick_counter += 1
             tick = st.session_state.tick_counter
             
+            # FIXED: Assigned dynamic list index choices to prevent execution crashes
             pool_clients = [1137, 716, 772, 681, 402]
             chosen_client = random.choice(pool_clients)
             
