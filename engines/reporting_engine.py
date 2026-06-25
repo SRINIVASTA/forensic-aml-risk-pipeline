@@ -55,7 +55,7 @@ def compile_pdf_report(df_clients, df_aml, df_flagged_alerts):
         pdf.cell(25, 6, str(row.get('client_id', 'N/A')), border=1, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
         pdf.cell(30, 6, str(row.get('transaction_id', row.get('tx_id', 'N/A'))), border=1, align='C', new_x=XPos.RIGHT, new_y=YPos.TOP)
         pdf.cell(35, 6, f"${float(row.get('amount', 0)):,.2f}", border=1, align='R', new_x=XPos.RIGHT, new_y=YPos.TOP)
-        pdf.cell(100, 6, str(row['AML_Status'])[:55], border=1, align='L', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.cell(100, 6, str(row.get('AML_Status', 'ML Anomaly'))[:55], border=1, align='L', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     return pdf.output(dest='S').encode('latin-1') if isinstance(pdf.output(dest='S'), str) else pdf.output(dest='S')
 
