@@ -4,6 +4,15 @@ import matplotlib.pyplot as plt
 import time
 import random
 from datetime import datetime
+import io
+
+# Safe FPDF cross-version namespace import fallback handler
+try:
+    from fpdf import FPDF
+    from fpdf.enums import XPos, YPos
+except ImportError:
+    from fpdf2 import FPDF
+    from fpdf2.enums import XPos, YPos
 
 # Import centralized modular functional packages from engines/ directory
 from engines.kyc_engine import process_kyc_pipeline
@@ -13,7 +22,7 @@ from engines.reporting_engine import compile_pdf_report, compile_excel_workbook
 st.set_page_config(page_title="Forensic KYC/AML Compliance Suite", layout="wide")
 
 # =====================================================================
-# SIDEBAR CONTROLS & STREAMING DATA ENVIRONMENT KEYS
+# SIDEBAR CONTROLS & ENVIRONMENT INITIALIZATION
 # =====================================================================
 st.sidebar.title("🛡️ Compliance Engine Settings")
 st.sidebar.markdown("Configure how data is piped into the forensic execution core.")
@@ -23,14 +32,27 @@ app_mode = st.sidebar.radio(
     ["⚡ Real-Time Live Data Stream", "📄 Static CSV Uploads"]
 )
 
+# Crucial: Ensure all structural state keys are initialized to avoid memory drops on rerun
 if "live_ledger" not in st.session_state:
     st.session_state.live_ledger = []
 if "tick_counter" not in st.session_state:
     st.session_state.tick_counter = 0
+if "final_df_aml" not in st.session_state:
+    st.session_state.final_df_aml = None
+if "final_df_flagged" not in st.session_state:
+    st.session_state.final_df_flagged = None
+
+# Custom control function to manually reset state values on demand
+if st.sidebar.button("🔄 Reset Live Simulation History"):
+    st.session_state.live_ledger = []
+    st.session_state.tick_counter = 0
+    st.session_state.final_df_aml = None
+    st.session_state.final_df_flagged = None
+    st.rerun()
 
 client_id_array = [1137, 716, 772, 681, 402]
 pep_flag_array = [0, 0, 1, 0, 0]
-fatf_country_array = [0, 0, 1, 1, 0]
+fatf_country_array = [0, 0, 0, 1, 0]
 ofac_country_array = [0, 0, 0, 1, 0]
 
 mock_clients_raw = pd.DataFrame({
@@ -43,7 +65,6 @@ mock_clients_raw = pd.DataFrame({
     "ofac_country": ofac_country_array,
     "ownership_opacity_score": [0.0, 0.0, 0.5, 0.0, 0.0]
 })
-
 # =====================================================================
 # MODALITY WORKFLOW 1: REAL-TIME STREAMING DATA ENGINE
 # =====================================================================
@@ -58,7 +79,8 @@ if app_mode == "⚡ Real-Time Live Data Stream":
     chart_placeholder = st.empty()
     table_placeholder = st.empty()
     
-    if run_stream:
+    # Loop executes only if checked and tick boundary hasn't been maxed out
+    if run_stream and st.session_state.tick_counter < 30:
         status_placeholder.info("Active Wire Feed: Streaming transactions, running Isolation Forest profiling...")
         
         while st.session_state.tick_counter < 30:
@@ -67,7 +89,7 @@ if app_mode == "⚡ Real-Time Live Data Stream":
             
             pool_clients = [1137, 716, 772, 681, 402]
             chosen_client = random.choice(pool_clients)
-            anomalous_ticks = [12, 18, 24]
+            anomalous_ticks = [12, 22]
             
             if tick == 5:
                 chosen_client = 772
@@ -99,16 +121,18 @@ if app_mode == "⚡ Real-Time Live Data Stream":
             st.session_state.live_ledger.append(new_tx)
             df_live_raw = pd.DataFrame(st.session_state.live_ledger)
             
-            df_aml, df_flagged_alerts = process_aml_pipeline(df_live_raw, df_clients)
+            df_aml_res, df_flagged_res = process_aml_pipeline(df_live_raw, df_clients)
+            st.session_state.final_df_aml = df_aml_res
+            st.session_state.final_df_flagged = df_flagged_res
             
             with chart_placeholder.container():
                 flag_metrics = {
-                    'OFAC Matches': int(df_aml['ofac_match_clean'].sum()),
-                    'FATF Blacklist': int(df_aml['fatf_country_clean'].sum()),
-                    'Structuring': int(df_aml['structuring_clean'].sum()),
-                    'Velocity Spike': int(df_aml['rapid_movement_clean'].sum()),
-                    'Mispricing': int(df_aml['trade_mispricing_clean'].sum()),
-                    'ML Outliers (1%)': int((df_aml['ML_Profiling'] == "⚠️ OUTLIER DETECTED").sum())
+                    'OFAC Matches': int(df_aml_res['ofac_match_clean'].sum()),
+                    'FATF Blacklist': int(df_aml_res['fatf_country_clean'].sum()),
+                    'Structuring': int(df_aml_res['structuring_clean'].sum()),
+                    'Velocity Spike': int(df_aml_res['rapid_movement_clean'].sum()),
+                    'Mispricing': int(df_aml_res['trade_mispricing_clean'].sum()),
+                    'ML Outliers (1%)': int((df_aml_res['ML_Profiling'] == "⚠️ OUTLIER DETECTED").sum())
                 }
                 fig, ax = plt.subplots(figsize=(8, 2.5))
                 pd.Series(flag_metrics).sort_values().plot(kind='barh', color=['#e74c3c' if v > 0 else '#bdc3c7' for v in pd.Series(flag_metrics).sort_values().values], ax=ax)
@@ -118,28 +142,61 @@ if app_mode == "⚡ Real-Time Live Data Stream":
                 
             with table_placeholder.container():
                 st.subheader("🔴 Live Compliance Case Desk (Flagged Surveillance Logs)")
-                if not df_flagged_alerts.empty:
-                    st.dataframe(df_flagged_alerts[['client_id', 'transaction_id', 'amount', 'AML_Status']].tail(10))
+                if not df_flagged_res.empty:
+                    st.dataframe(df_flagged_res[['client_id', 'transaction_id', 'amount', 'AML_Status']].tail(10))
                 else:
                     st.success("Monitoring system clear. Scanning network channels...")
                     
             time.sleep(0.1)
-            
+
+    # Persistent Snapshot Rendering Path after streaming completes or loops skip on download reruns
+    if st.session_state.tick_counter >= 30:
         status_placeholder.success("Simulation complete. Full log extraction arrays packaged.")
         
-        if 'df_aml' in locals() and 'df_flagged_alerts' in locals():
-            pdf_data = compile_pdf_report(df_clients, df_aml, df_flagged_alerts)
-            st.download_button(
-                label="📥 Download Forensic Live Stream PDF Audit Report", 
-                data=pdf_data, 
-                file_name="Live_Stream_Forensic_Report.pdf", 
-                mime="application/pdf"
-            )
+        if st.session_state.final_df_aml is not None and st.session_state.final_df_flagged is not None:
+            df_aml_res = st.session_state.final_df_aml
+            df_flagged_res = st.session_state.final_df_flagged
+            
+            with chart_placeholder.container():
+                flag_metrics = {
+                    'OFAC Matches': int(df_aml_res['ofac_match_clean'].sum()),
+                    'FATF Blacklist': int(df_aml_res['fatf_country_clean'].sum()),
+                    'Structuring': int(df_aml_res['structuring_clean'].sum()),
+                    'Velocity Spike': int(df_aml_res['rapid_movement_clean'].sum()),
+                    'Mispricing': int(df_aml_res['trade_mispricing_clean'].sum()),
+                    'ML Outliers (1%)': int((df_aml_res['ML_Profiling'] == "⚠️ OUTLIER DETECTED").sum())
+                }
+                fig, ax = plt.subplots(figsize=(8, 2.5))
+                pd.Series(flag_metrics).sort_values().plot(kind='barh', color=['#e74c3c' if v > 0 else '#bdc3c7' for v in pd.Series(flag_metrics).sort_values().values], ax=ax)
+                plt.tight_layout()
+                st.pyplot(fig)
+                plt.close()
+                
+            with table_placeholder.container():
+                st.subheader("🔴 Live Compliance Case Desk (Flagged Surveillance Logs)")
+                st.dataframe(df_flagged_res[['client_id', 'transaction_id', 'amount', 'AML_Status']])
+
+            col_down1, col_down2 = st.columns(2)
+            with col_down1:
+                pdf_data = compile_pdf_report(df_clients, df_aml_res, df_flagged_res)
+                st.download_button(
+                    label="📥 Download Forensic Live Stream PDF Audit Report", 
+                    data=pdf_data, 
+                    file_name="Live_Stream_Forensic_Report.pdf", 
+                    mime="application/pdf"
+                )
+            with col_down2:
+                excel_data = compile_excel_workbook(df_clients, df_aml_res, df_flagged_res)
+                st.download_button(
+                    label="📥 Download Live Stream Excel Workbook",
+                    data=excel_data,
+                    file_name="Live_Stream_Data_Ledger.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
         else:
             st.error("Error: Processing arrays were cleared. Please refresh and restart the streaming transmission.")
-    else:
+    elif not run_stream:
         status_placeholder.warning("Wire tracking link disconnected. Toggle the control switch to pipe incoming transmission signals.")
-
 # =====================================================================
 # MODALITY WORKFLOW 2: STATIC FILE UPLOADS LAYER
 # =====================================================================
