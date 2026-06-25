@@ -78,9 +78,10 @@ def compile_pdf_report(df_clients, df_aml, df_flagged_alerts):
         pdf.set_font('Helvetica', 'I', 10)
         pdf.cell(190, 10, 'No anomalies isolated across data arrays during evaluation window.', border=1, align='C', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-    return pdf.output()
+    # FIXED: Convert pdf output subclass directly to raw bytes array for Streamlit compatibility
+    return bytes(pdf.output())
 
-# FIXED: Synchronized signature to accept 3 parameters to prevent frontend layout crashes
+# FIXED: Standardised signature parameters match frontend app.py layout tracking perfectly
 def compile_excel_workbook(df_clients, df_aml, df_flagged_alerts):
     excel_buffer = io.BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
