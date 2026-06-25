@@ -2,8 +2,9 @@ import pandas as pd
 import numpy as np
 
 def dynamic_levenshtein_distance(str1, str2):
+    """Calculates editorial distance matrix between names to bypass typos."""
     m, n = len(str1), len(str2)
-    dp = [list(range(n + 1)) if i == 0 else [i] + [0] * n for i in range(m + 1)]
+    dp = [[j if i == 0 else (i if j == 0 else 0) for j in range(n + 1)] for i in range(m + 1)]
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             if str1[i-1] == str2[j-1]:
