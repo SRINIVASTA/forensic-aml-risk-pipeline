@@ -13,7 +13,7 @@ from engines.reporting_engine import compile_pdf_report, compile_excel_workbook
 st.set_page_config(page_title="Forensic KYC/AML Compliance Suite", layout="wide")
 
 # =====================================================================
-# SIDEBAR CONTROLS
+# SIDEBAR CONTROLS & STREAMING DATA ENVIRONMENT KEYS
 # =====================================================================
 st.sidebar.title("🛡️ Compliance Engine Settings")
 st.sidebar.markdown("Configure how data is piped into the forensic execution core.")
@@ -28,9 +28,8 @@ if "live_ledger" not in st.session_state:
 if "tick_counter" not in st.session_state:
     st.session_state.tick_counter = 0
 
-# FIXED: Explicit variables mapping structural arrays to fully eliminate syntax gaps
 client_id_array = [1137, 716, 772, 681, 402]
-pep_flag_array = [0, 0, 0, 1, 0]
+pep_flag_array = [0, 0, 1, 0, 0]
 fatf_country_array = [0, 0, 1, 1, 0]
 ofac_country_array = [0, 0, 0, 1, 0]
 
@@ -66,12 +65,9 @@ if app_mode == "⚡ Real-Time Live Data Stream":
             st.session_state.tick_counter += 1
             tick = st.session_state.tick_counter
             
-            # FIXED: Explicit pool client reference populated
             pool_clients = [1137, 716, 772, 681, 402]
             chosen_client = random.choice(pool_clients)
-            
-            # FIXED: Set an explicit list array for matching outlier evaluation loops [10, 15, 22]
-            anomalous_ticks = [10, 15, 22]
+            anomalous_ticks = [12, 18, 24]
             
             if tick == 5:
                 chosen_client = 772
@@ -212,4 +208,5 @@ else:
                     label="📥 Export Full Ledger Excel Workbook",
                     data=excel_data,
                     file_name="Static_Forensic_Data_Ledger.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
